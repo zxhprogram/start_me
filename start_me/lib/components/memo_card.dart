@@ -118,9 +118,9 @@ class _MemoCardState extends State<MemoCard> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        entry.value.length > 30
-                            ? '${entry.value.substring(0, 30)}...'
-                            : entry.value,
+                        entry.value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.black87,
                           fontSize: 12,
