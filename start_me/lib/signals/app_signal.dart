@@ -78,11 +78,13 @@ final hotSearchData = signal<List<Map<String, dynamic>>>([
   {'rank': 4, 'title': '德云社三大创始人，为什么只有郭德纲走到...', 'views': '191万'},
 ]);
 
-// Stock data
+// Stock data - Global indices (default values, will be updated on app load)
 final stockData = signal<List<Map<String, dynamic>>>([
-  {'name': '九安医疗', 'code': '002432', 'price': 0.0, 'change': '0%'},
-  {'name': '宁德时代', 'code': '300750', 'price': 0.0, 'change': '0%'},
-  {'name': '数字政通', 'code': '300075', 'price': 0.0, 'change': '0%'},
+  {'name': '日经 225', 'code': 'NIKKI', 'price': '', 'change': ''},
+  {'name': '恒生指数', 'code': 'HSI', 'price': '', 'change': ''},
+  {'name': '道琼斯', 'code': 'DJIA', 'price': '', 'change': ''},
+  {'name': '标普 500', 'code': 'SP500', 'price': '', 'change': ''},
+  {'name': '德国 DAX', 'code': 'DAX', 'price': '', 'change': ''},
 ]);
 
 // Todo count

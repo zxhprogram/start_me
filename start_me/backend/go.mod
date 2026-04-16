@@ -7,6 +7,7 @@ require (
 	github.com/gin-contrib/cors v1.5.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-resty/resty/v2 v2.11.0
+	github.com/mattn/go-sqlite3 v1.14.42
 )
 
 require (

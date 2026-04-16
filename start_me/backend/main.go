@@ -1,20 +1,35 @@
 package main
 
 import (
+	"log"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"start_me_backend/database"
 	"start_me_backend/handlers"
 )
 
 func main() {
+	// 初始化数据库
+	err := database.InitDB("memos.db")
+	if err != nil {
+		log.Fatal("数据库初始化失败:", err)
+	}
+	defer database.CloseDB()
+
+	// 创建数据表
+	err = database.CreateTables()
+	if err != nil {
+		log.Fatal("创建数据表失败:", err)
+	}
+
 	r := gin.Default()
 
 	// CORS 配置
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
-	config.AllowMethods = []string{"GET", "POST", "OPTIONS"}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept"}
 	config.MaxAge = 12 * time.Hour
 	r.Use(cors.New(config))
@@ -25,6 +40,11 @@ func main() {
 		api.POST("/fetch", handlers.FetchWebInfo)
 		api.GET("/proxy/icon", handlers.ProxyIcon)
 		api.GET("/github/trending", handlers.GetTrendingRepos)
+		// 备忘录路由
+		api.GET("/memos", handlers.GetMemos)
+		api.POST("/memos", handlers.CreateMemo)
+		api.DELETE("/memos/:id", handlers.DeleteMemo)
+		api.PUT("/memos/:id", handlers.UpdateMemo)
 	}
 
 	// 启动服务
