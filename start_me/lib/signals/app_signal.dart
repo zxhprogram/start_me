@@ -303,3 +303,8 @@ final githubTrendingData = signal<Map<String, List<dynamic>>>({
 
 // Current GitHub Trending period signal
 final githubTrendingPeriod = signal<String>('daily');
+
+// GitHub OAuth signals
+final githubToken = signal<String>('');
+final githubUser = signal<Map<String, String>>({});
+final isGithubLoggedIn = computed(() => githubToken.value.isNotEmpty);

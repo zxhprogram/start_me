@@ -35,6 +35,9 @@ dependencies:
   signals: ^6.0.2
   http: ^1.2.0
   flutter_quill: ^11.5.0
+  flutter_markdown: ^0.7.6+2
+  shared_preferences: ^2.2.2
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:

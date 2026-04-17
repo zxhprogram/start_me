@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 import '../services/github_service.dart';
 import '../signals/app_signal.dart';
+import 'github_detail_dialog.dart';
 
 class GitHubTrendingCard extends StatefulWidget {
   const GitHubTrendingCard({super.key});
@@ -57,6 +58,16 @@ class _GitHubTrendingCardState extends State<GitHubTrendingCard> {
     }
   }
 
+  void _openDetailDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => GitHubDetailDialog(
+        onClose: () => Navigator.pop(context),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Watch((context) {
@@ -65,8 +76,9 @@ class _GitHubTrendingCardState extends State<GitHubTrendingCard> {
       final reposData = githubTrendingData.value[currentPeriod] ?? [];
       final List<TrendingRepo> repos = reposData.cast<TrendingRepo>();
 
-      return Container(
-        height: 380, // Fixed height for the card
+      return GestureDetector(
+        onTap: _openDetailDialog,
+        child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF2D2D3A).withOpacity(0.8),
@@ -159,6 +171,7 @@ class _GitHubTrendingCardState extends State<GitHubTrendingCard> {
             ),
           ],
         ),
+      ),
       );
     });
   }
@@ -173,13 +186,14 @@ class _GitHubTrendingCardState extends State<GitHubTrendingCard> {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.error_outline,
             color: Colors.white.withOpacity(0.5),
-            size: 48,
+            size: 36,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             _error ?? '获取失败',
             style: TextStyle(

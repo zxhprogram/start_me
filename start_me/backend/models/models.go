@@ -35,3 +35,10 @@ type TrendingResponse struct {
 	Data    []TrendingRepo `json:"data,omitempty"`
 	Error   string         `json:"error,omitempty"`
 }
+
+// ReadmeResponse GitHub README 响应
+type ReadmeResponse struct {
+	Success bool   `json:"success"`
+	Data    string `json:"data,omitempty"`
+	Error   string `json:"error,omitempty"`
+}

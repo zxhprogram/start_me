@@ -4,6 +4,7 @@ import '../signals/app_signal.dart';
 import 'add_group_dialog.dart';
 import 'edit_group_dialog.dart';
 import 'remove_group_dialog.dart';
+import 'settings_dialog.dart';
 
 class Sidebar extends StatefulWidget {
   const Sidebar({super.key});
@@ -13,6 +14,16 @@ class Sidebar extends StatefulWidget {
 }
 
 class _SidebarState extends State<Sidebar> {
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => SettingsDialog(
+        onClose: () => Navigator.pop(context),
+      ),
+    );
+  }
+
   void _showAddGroupDialog() {
     AddGroupDialog.show(context);
   }
@@ -82,16 +93,31 @@ class _SidebarState extends State<Sidebar> {
           // User avatar
           Padding(
             padding: const EdgeInsets.only(top: 24, bottom: 16),
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.blue.withOpacity(0.3),
-                border: Border.all(color: Colors.white24, width: 2),
-              ),
-              child: const Icon(Icons.person, color: Colors.white, size: 28),
-            ),
+            child: Watch((context) {
+              final user = githubUser.value;
+              final avatarUrl = user['avatar_url'] ?? '';
+              return Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blue.withOpacity(0.3),
+                  border: Border.all(color: Colors.white24, width: 2),
+                ),
+                child: avatarUrl.isNotEmpty
+                    ? ClipOval(
+                        child: Image.network(
+                          avatarUrl,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.person, color: Colors.white, size: 28),
+                        ),
+                      )
+                    : const Icon(Icons.person, color: Colors.white, size: 28),
+              );
+            }),
           ),
 
           // Online indicator
@@ -148,7 +174,7 @@ class _SidebarState extends State<Sidebar> {
                 icon: Icons.settings,
                 label: '',
                 isSelected: false,
-                onTap: () {},
+                onTap: _showSettingsDialog,
               ),
               const SizedBox(height: 16),
             ],

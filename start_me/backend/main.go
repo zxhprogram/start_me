@@ -30,7 +30,7 @@ func main() {
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
-	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	config.MaxAge = 12 * time.Hour
 	r.Use(cors.New(config))
 
@@ -40,12 +40,22 @@ func main() {
 		api.POST("/fetch", handlers.FetchWebInfo)
 		api.GET("/proxy/icon", handlers.ProxyIcon)
 		api.GET("/github/trending", handlers.GetTrendingRepos)
+		api.GET("/github/readme", handlers.GetRepoReadme)
 		// 备忘录路由
 		api.GET("/memos", handlers.GetMemos)
 		api.POST("/memos", handlers.CreateMemo)
 		api.DELETE("/memos/:id", handlers.DeleteMemo)
 		api.PUT("/memos/:id", handlers.UpdateMemo)
+		// GitHub OAuth 路由
+		api.GET("/github/oauth/url", handlers.StartOAuth)
+		api.POST("/github/oauth/token/store", handlers.StoreOAuthToken)
+		api.GET("/github/oauth/token/poll", handlers.PollOAuthToken)
+		api.GET("/github/user", handlers.GetGitHubUser)
+		api.GET("/github/stars", handlers.GetUserStars)
 	}
+
+	// GitHub OAuth 回调（路径与 GitHub App 配置一致）
+	r.GET("/auth/github/callback", handlers.OAuthCallback)
 
 	// 启动服务
 	r.Run(":8080")

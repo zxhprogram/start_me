@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"start_me_backend/models"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-resty/resty/v2"
-	"start_me_backend/models"
 )
 
 var githubClient = resty.New().

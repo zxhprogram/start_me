@@ -54,4 +54,24 @@ class GitHubService {
       return [];
     }
   }
+
+  /// 获取 GitHub 仓库 README
+  static Future<String?> fetchRepoReadme(String repoName) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/github/readme?repo=$repoName'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          return data['data'] as String;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching repo readme: $e');
+      return null;
+    }
+  }
 }
