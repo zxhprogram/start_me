@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:signals/signals.dart';
+import '../services/weather_service.dart';
 
 // App-wide signals
 final selectedNavIndex = signal<int>(0);
@@ -53,21 +54,14 @@ final availableIcons = [
 final hotSearchTabIndex = signal<int>(0);
 final hotSearchTabs = ['知乎', '百度', '微博'];
 
-// Weather data signal
-final weatherData = signal<Map<String, dynamic>>({
-  'location': '丰台',
-  'temp': 16,
-  'condition': '多云',
-  'low': 9,
-  'high': 20,
-  'forecast': [
-    {'day': '明天', 'icon': Icons.cloud, 'low': 9, 'high': 21},
-    {'day': '周三', 'icon': Icons.cloud, 'low': 13, 'high': 25},
-    {'day': '周四', 'icon': Icons.wb_sunny, 'low': 9, 'high': 21},
-    {'day': '周五', 'icon': Icons.wb_sunny, 'low': 11, 'high': 25},
-    {'day': '周六', 'icon': Icons.cloud, 'low': 14, 'high': 26},
-    {'day': '周日', 'icon': Icons.cloud, 'low': 11, 'high': 26},
-  ],
+// Weather data signal - stores full WeatherData from API
+final fullWeatherData = signal<WeatherData?>(null);
+
+// Weather location (for city switching)
+final weatherLocation = signal<Map<String, dynamic>>({
+  'lat': 39.8585,
+  'lon': 116.2867,
+  'name': '北京市·丰台',
 });
 
 // Hot search data
