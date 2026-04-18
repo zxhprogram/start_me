@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'services/memo_service.dart';
 import 'services/github_auth_service.dart';
@@ -20,6 +22,18 @@ void main() async {
     if (savedUser != null) {
       githubUser.value = savedUser;
     }
+  }
+
+  // 恢复已订阅的热搜数据源
+  final prefs = await SharedPreferences.getInstance();
+  final subscribedJson = prefs.getString('subscribed_nodes');
+  if (subscribedJson != null) {
+    try {
+      final list = jsonDecode(subscribedJson) as List;
+      subscribedNodes.value = List<Map<String, dynamic>>.from(
+        list.map((e) => Map<String, dynamic>.from(e)),
+      );
+    } catch (_) {}
   }
 
   // 加载天气数据

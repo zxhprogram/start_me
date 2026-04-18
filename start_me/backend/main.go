@@ -58,6 +58,9 @@ func main() {
 		api.GET("/weather/search", handlers.SearchCity)
 		// 搜索建议
 		api.GET("/search/suggestions", handlers.GetSearchSuggestions)
+		// 热搜榜
+		api.GET("/tophub/hot", handlers.GetHotTopics)
+		api.GET("/tophub/nodes", handlers.GetTopHubNodes)
 	}
 
 	// GitHub OAuth 回调（路径与 GitHub App 配置一致）

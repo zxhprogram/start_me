@@ -52,7 +52,13 @@ final availableIcons = [
 ];
 
 final hotSearchTabIndex = signal<int>(0);
-final hotSearchTabs = ['知乎', '百度', '微博'];
+
+// 已订阅的热搜数据源（nodeId + name）
+final subscribedNodes = signal<List<Map<String, dynamic>>>([
+  {'id': 6, 'name': '知乎'},
+  {'id': 2, 'name': '百度'},
+  {'id': 1, 'name': '微博'},
+]);
 
 // Weather data signal - stores full WeatherData from API
 final fullWeatherData = signal<WeatherData?>(null);
@@ -64,13 +70,8 @@ final weatherLocation = signal<Map<String, dynamic>>({
   'name': '北京市·丰台',
 });
 
-// Hot search data
-final hotSearchData = signal<List<Map<String, dynamic>>>([
-  {'rank': 1, 'title': '李想朋友圈发飙疑似内涵东风日产，该举动...', 'views': '246万'},
-  {'rank': 2, 'title': '一个人从万米高空坠落，落在 100 米厚的棉...', 'views': '240万'},
-  {'rank': 3, 'title': '国家广播电视总局发文，全国电视频道已经...', 'views': '211万'},
-  {'rank': 4, 'title': '德云社三大创始人，为什么只有郭德纲走到...', 'views': '191万'},
-]);
+// Hot search data - key is nodeId, value is list of hot items
+final hotSearchData = signal<Map<int, List<Map<String, dynamic>>>>({});
 
 // Stock data - Global indices (default values, will be updated on app load)
 final stockData = signal<List<Map<String, dynamic>>>([
