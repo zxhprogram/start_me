@@ -52,6 +52,7 @@ func main() {
 		api.GET("/github/oauth/token/poll", handlers.PollOAuthToken)
 		api.GET("/github/user", handlers.GetGitHubUser)
 		api.GET("/github/stars", handlers.GetUserStars)
+		api.GET("/github/feed", handlers.GetGitHubFeed)
 		// 天气路由
 		api.GET("/weather", handlers.GetWeather)
 		api.GET("/weather/search", handlers.SearchCity)

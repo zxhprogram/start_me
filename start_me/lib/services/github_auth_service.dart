@@ -106,6 +106,33 @@ class GitHubAuthService {
     }
   }
 
+  /// 获取用户 Feed（分页）
+  static Future<Map<String, dynamic>> getUserFeed(String token, {int page = 1, String? login}) async {
+    try {
+      var url = '$_baseUrl/github/feed?page=$page';
+      if (login != null && login.isNotEmpty) {
+        url += '&login=$login';
+      }
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          return {
+            'data': List<Map<String, dynamic>>.from(data['data']),
+            'hasMore': data['has_more'] == true,
+          };
+        }
+      }
+      return {'data': <Map<String, dynamic>>[], 'hasMore': false};
+    } catch (e) {
+      print('Error getting user feed: $e');
+      return {'data': <Map<String, dynamic>>[], 'hasMore': false};
+    }
+  }
+
   /// 保存 token 到本地
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();

@@ -45,3 +45,23 @@ type OAuthTokenResponse struct {
 	Token   string `json:"token,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
+
+// GitHubFeedEvent GitHub Feed 事件
+type GitHubFeedEvent struct {
+	Actor       string `json:"actor"`
+	ActorAvatar string `json:"actor_avatar"`
+	EventType   string `json:"event_type"`
+	EventDesc   string `json:"event_desc"`
+	RepoName    string `json:"repo_name"`
+	Detail      string `json:"detail"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// GitHubFeedResponse GitHub Feed 响应
+type GitHubFeedResponse struct {
+	Success bool              `json:"success"`
+	Data    []GitHubFeedEvent `json:"data,omitempty"`
+	Page    int               `json:"page,omitempty"`
+	HasMore bool              `json:"has_more"`
+	Error   string            `json:"error,omitempty"`
+}

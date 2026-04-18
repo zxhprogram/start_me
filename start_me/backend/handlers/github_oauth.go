@@ -250,3 +250,249 @@ func extractToken(c *gin.Context) string {
 	}
 	return c.Query("token")
 }
+
+// GetGitHubFeed 获取用户的 GitHub Feed（received events）
+func GetGitHubFeed(c *gin.Context) {
+	token := extractToken(c)
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, models.GitHubFeedResponse{
+			Success: false,
+			Error:   "未提供 token",
+		})
+		return
+	}
+
+	login := c.Query("login")
+	if login == "" {
+		// 先获取用户 login
+		client := resty.New()
+		resp, err := client.R().
+			SetHeader("Authorization", "Bearer "+token).
+			SetHeader("Accept", "application/vnd.github.v3+json").
+			SetHeader("User-Agent", "StartMe-App").
+			Get("https://api.github.com/user")
+		if err != nil {
+			c.JSON(http.StatusOK, models.GitHubFeedResponse{Success: false, Error: "获取用户信息失败"})
+			return
+		}
+		var user map[string]interface{}
+		if err := json.Unmarshal(resp.Body(), &user); err != nil {
+			c.JSON(http.StatusOK, models.GitHubFeedResponse{Success: false, Error: "解析用户信息失败"})
+			return
+		}
+		login, _ = user["login"].(string)
+		if login == "" {
+			c.JSON(http.StatusOK, models.GitHubFeedResponse{Success: false, Error: "无法获取用户名"})
+			return
+		}
+	}
+
+	page := c.DefaultQuery("page", "1")
+	pageNum, _ := strconv.Atoi(page)
+	if pageNum < 1 {
+		pageNum = 1
+	}
+
+	client := resty.New()
+	resp, err := client.R().
+		SetHeader("Authorization", "Bearer "+token).
+		SetHeader("Accept", "application/vnd.github.v3+json").
+		SetHeader("User-Agent", "StartMe-App").
+		SetQueryParam("per_page", "30").
+		SetQueryParam("page", strconv.Itoa(pageNum)).
+		Get(fmt.Sprintf("https://api.github.com/users/%s/received_events", login))
+
+	if err != nil {
+		c.JSON(http.StatusOK, models.GitHubFeedResponse{Success: false, Error: "请求失败: " + err.Error()})
+		return
+	}
+
+	var rawEvents []map[string]interface{}
+	if err := json.Unmarshal(resp.Body(), &rawEvents); err != nil {
+		c.JSON(http.StatusOK, models.GitHubFeedResponse{Success: false, Error: "解析失败: " + err.Error()})
+		return
+	}
+
+	hasMore := false
+	linkHeader := resp.Header().Get("Link")
+	if strings.Contains(linkHeader, `rel="next"`) {
+		hasMore = true
+	}
+
+	var events []models.GitHubFeedEvent
+	for _, raw := range rawEvents {
+		eventType, _ := raw["type"].(string)
+
+		// actor
+		actorMap, _ := raw["actor"].(map[string]interface{})
+		actorLogin, _ := actorMap["login"].(string)
+		actorAvatar, _ := actorMap["avatar_url"].(string)
+
+		// repo
+		repoMap, _ := raw["repo"].(map[string]interface{})
+		repoName, _ := repoMap["name"].(string)
+
+		// payload
+		payload, _ := raw["payload"].(map[string]interface{})
+
+		// created_at
+		createdAt, _ := raw["created_at"].(string)
+
+		desc, detail := buildEventDesc(eventType, payload, repoName)
+
+		events = append(events, models.GitHubFeedEvent{
+			Actor:       actorLogin,
+			ActorAvatar: actorAvatar,
+			EventType:   eventType,
+			EventDesc:   desc,
+			RepoName:    repoName,
+			Detail:      detail,
+			CreatedAt:   createdAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, models.GitHubFeedResponse{
+		Success: true,
+		Data:    events,
+		Page:    pageNum,
+		HasMore: hasMore,
+	})
+}
+
+// buildEventDesc 根据事件类型生成中文描述和详情
+func buildEventDesc(eventType string, payload map[string]interface{}, repoName string) (string, string) {
+	switch eventType {
+	case "WatchEvent":
+		return "starred", ""
+	case "CreateEvent":
+		refType, _ := payload["ref_type"].(string)
+		ref, _ := payload["ref"].(string)
+		refTypeZh := refType
+		switch refType {
+		case "repository":
+			refTypeZh = "仓库"
+		case "branch":
+			refTypeZh = "分支"
+		case "tag":
+			refTypeZh = "标签"
+		}
+		if ref != "" {
+			return "创建了" + refTypeZh, ref
+		}
+		return "创建了" + refTypeZh, ""
+	case "ForkEvent":
+		forkee, _ := payload["forkee"].(map[string]interface{})
+		fullName, _ := forkee["full_name"].(string)
+		return "fork 了", fullName
+	case "PushEvent":
+		size := 0
+		if s, ok := payload["size"].(float64); ok {
+			size = int(s)
+		}
+		commits, _ := payload["commits"].([]interface{})
+		detail := ""
+		if len(commits) > 0 {
+			lastCommit, _ := commits[len(commits)-1].(map[string]interface{})
+			msg, _ := lastCommit["message"].(string)
+			if len(msg) > 80 {
+				msg = msg[:80] + "..."
+			}
+			detail = msg
+		}
+		return fmt.Sprintf("推送了 %d 个提交到", size), detail
+	case "PullRequestEvent":
+		action, _ := payload["action"].(string)
+		pr, _ := payload["pull_request"].(map[string]interface{})
+		number := 0
+		title := ""
+		if n, ok := payload["number"].(float64); ok {
+			number = int(n)
+		}
+		if pr != nil {
+			title, _ = pr["title"].(string)
+			if merged, ok := pr["merged"].(bool); ok && merged && action == "closed" {
+				action = "merged"
+			}
+		}
+		actionZh := action
+		switch action {
+		case "opened":
+			actionZh = "创建了"
+		case "closed":
+			actionZh = "关闭了"
+		case "merged":
+			actionZh = "合并了"
+		case "reopened":
+			actionZh = "重新打开了"
+		}
+		return fmt.Sprintf("%s PR #%d", actionZh, number), title
+	case "IssuesEvent":
+		action, _ := payload["action"].(string)
+		number := 0
+		if n, ok := payload["number"].(float64); ok {
+			number = int(n)
+		}
+		issue, _ := payload["issue"].(map[string]interface{})
+		title := ""
+		if issue != nil {
+			title, _ = issue["title"].(string)
+		}
+		actionZh := action
+		switch action {
+		case "opened":
+			actionZh = "创建了"
+		case "closed":
+			actionZh = "关闭了"
+		case "reopened":
+			actionZh = "重新打开了"
+		}
+		return fmt.Sprintf("%s issue #%d", actionZh, number), title
+	case "IssueCommentEvent":
+		issue, _ := payload["issue"].(map[string]interface{})
+		number := 0
+		if issue != nil {
+			if n, ok := issue["number"].(float64); ok {
+				number = int(n)
+			}
+		}
+		comment, _ := payload["comment"].(map[string]interface{})
+		body := ""
+		if comment != nil {
+			body, _ = comment["body"].(string)
+			if len(body) > 80 {
+				body = body[:80] + "..."
+			}
+		}
+		return fmt.Sprintf("评论了 #%d", number), body
+	case "ReleaseEvent":
+		release, _ := payload["release"].(map[string]interface{})
+		tag := ""
+		if release != nil {
+			tag, _ = release["tag_name"].(string)
+		}
+		return "发布了", tag
+	case "DeleteEvent":
+		refType, _ := payload["ref_type"].(string)
+		ref, _ := payload["ref"].(string)
+		return "删除了 " + refType, ref
+	case "PublicEvent":
+		return "公开了", ""
+	case "MemberEvent":
+		action, _ := payload["action"].(string)
+		member, _ := payload["member"].(map[string]interface{})
+		memberLogin := ""
+		if member != nil {
+			memberLogin, _ = member["login"].(string)
+		}
+		if action == "added" {
+			return "添加了成员", memberLogin
+		}
+		return action + " 成员", memberLogin
+	case "GollumEvent":
+		return "更新了 Wiki", ""
+	case "CommitCommentEvent":
+		return "评论了提交", ""
+	default:
+		return eventType, ""
+	}
+}

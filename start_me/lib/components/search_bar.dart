@@ -36,23 +36,16 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
             onTap: _hideOverlay,
             child: Container(color: Colors.transparent),
           ),
-          // Dropdown positioned below the search bar
-          Positioned(
-            top: 64,
-            left: MediaQuery.of(context).size.width > 800
-                ? (MediaQuery.of(context).size.width - 80 - 800) / 2 + 80 + 16
-                : 96,
-            width: 400,
-            child: CompositedTransformFollower(
-              link: _layerLink,
-              showWhenUnlinked: false,
-              offset: const Offset(0, 8),
-              child: Material(
-                color: Colors.transparent,
-                child: GestureDetector(
-                  onTap: () {}, // Prevent tap from closing
-                  child: _buildEngineDropdown(),
-                ),
+          // Dropdown positioned directly below the search bar
+          CompositedTransformFollower(
+            link: _layerLink,
+            showWhenUnlinked: false,
+            offset: const Offset(0, 60),
+            child: Material(
+              color: Colors.transparent,
+              child: GestureDetector(
+                onTap: () {}, // Prevent tap from closing
+                child: _buildEngineDropdown(),
               ),
             ),
           ),
@@ -141,56 +134,28 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
 
   Widget _buildEngineDropdown() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Watch((context) {
-        return Column(
+        return Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onTap: _hideOverlay,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      size: 16,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: [
-                ...searchEngines.asMap().entries.map((entry) {
-                  final engine = entry.value;
-                  final isSelected = selectedSearchEngine.value == entry.key;
-                  return _buildEngineItem(engine, entry.key, isSelected);
-                }),
-                _buildAddButton(),
-              ],
-            ),
+            ...searchEngines.asMap().entries.map((entry) {
+              final engine = entry.value;
+              final isSelected = selectedSearchEngine.value == entry.key;
+              return _buildEngineItem(engine, entry.key, isSelected);
+            }),
+            _buildAddButton(),
           ],
         );
       }),
@@ -204,18 +169,18 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   ) {
     return GestureDetector(
       onTap: () => _selectEngine(index),
-      child: Container(
-        width: 60,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: isSelected
                     ? (engine['color'] as Color).withOpacity(0.15)
-                    : Colors.grey.withOpacity(0.1),
+                    : Colors.grey.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12),
                 border: isSelected
                     ? Border.all(color: engine['color'] as Color, width: 2)
@@ -228,7 +193,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
               engine['name'] as String,
               style: TextStyle(
                 color: isSelected ? Colors.black87 : Colors.black54,
-                fontSize: 11,
+                fontSize: 10,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
@@ -243,14 +208,14 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   Widget _buildAddButton() {
     return GestureDetector(
       onTap: () {},
-      child: Container(
-        width: 60,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -259,12 +224,12 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                   width: 1,
                 ),
               ),
-              child: const Icon(Icons.add, color: Colors.grey, size: 24),
+              child: const Icon(Icons.add, color: Colors.grey, size: 22),
             ),
             const SizedBox(height: 4),
             const Text(
               '添加',
-              style: TextStyle(color: Colors.black54, fontSize: 11),
+              style: TextStyle(color: Colors.black54, fontSize: 10),
               textAlign: TextAlign.center,
             ),
           ],

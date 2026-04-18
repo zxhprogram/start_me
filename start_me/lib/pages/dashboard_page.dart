@@ -17,6 +17,7 @@ import '../components/qwerty_card.dart';
 import '../components/daily_quote.dart';
 import '../components/group_icons_grid.dart';
 import '../components/github_trending_card.dart';
+import '../components/github_feed_card.dart';
 import '../services/wallpaper_service.dart';
 import '../signals/app_signal.dart';
 
@@ -238,6 +239,7 @@ class _DashboardPageState extends State<DashboardPage> {
             MemoCard(),
             QwertyCard(),
             GitHubTrendingCard(),
+            GitHubFeedCard(),
           ],
         );
       },
