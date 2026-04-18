@@ -18,6 +18,7 @@ import '../components/daily_quote.dart';
 import '../components/group_icons_grid.dart';
 import '../components/github_trending_card.dart';
 import '../components/github_feed_card.dart';
+import '../components/music_card.dart';
 import '../services/wallpaper_service.dart';
 import '../signals/app_signal.dart';
 
@@ -226,20 +227,21 @@ class _DashboardPageState extends State<DashboardPage> {
           childAspectRatio: crossAxisCount == 1
               ? 1.8
               : (crossAxisCount == 2 ? 1.5 : (crossAxisCount == 3 ? 1.7 : 2.0)),
-          children: const [
-            WeatherCard(),
-            HotSearchCard(),
-            CalendarCard(),
-            BookmarkShortcuts(),
-            EnglishCard(),
-            StockCard(),
-            TodoCard(),
-            RecordingCard(),
-            HolidayCard(),
-            MemoCard(),
-            QwertyCard(),
-            GitHubTrendingCard(),
-            GitHubFeedCard(),
+          children: [
+            const WeatherCard(),
+            const HotSearchCard(),
+            const CalendarCard(),
+            const BookmarkShortcuts(),
+            const EnglishCard(),
+            const StockCard(),
+            const TodoCard(),
+            const RecordingCard(),
+            const HolidayCard(),
+            const MemoCard(),
+            const QwertyCard(),
+            const MusicCard(),
+            const GitHubTrendingCard(),
+            const GitHubFeedCard(),
           ],
         );
       },
