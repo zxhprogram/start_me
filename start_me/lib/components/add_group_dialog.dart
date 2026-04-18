@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 import '../signals/app_signal.dart';
+import '../services/bookmark_service.dart';
 
 class AddGroupDialog extends StatefulWidget {
   const AddGroupDialog({super.key});
@@ -42,6 +43,18 @@ class _AddGroupDialogState extends State<AddGroupDialog> {
         ...currentItems,
         {'icon': selectedIcon, 'label': name},
       ];
+
+      // Also create the groupIcons entry
+      final currentIcons = Map<String, List<Map<String, dynamic>>>.from(
+        groupIcons.value,
+      );
+      currentIcons[name] = [];
+      groupIcons.value = currentIcons;
+
+      // Sync to backend
+      if (isLoggedIn.value) {
+        BookmarkService.saveGroups();
+      }
     }
     Navigator.of(context).pop();
   }

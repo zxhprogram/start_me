@@ -6,6 +6,9 @@ import 'app.dart';
 import 'services/memo_service.dart';
 import 'services/github_auth_service.dart';
 import 'services/weather_service.dart';
+import 'services/settings_service.dart';
+import 'services/auth_service.dart';
+import 'services/bookmark_service.dart';
 import 'signals/app_signal.dart';
 
 void main() async {
@@ -15,6 +18,31 @@ void main() async {
   // 初始化备忘录数据
   final memos = await MemoService.fetchMemos();
   memoList.value = memos.map((m) => m.content).toList();
+
+  // 恢复用户登录状态
+  await AuthService.loadToken();
+  if (AuthService.token.isNotEmpty) {
+    authToken.value = AuthService.token;
+    final profile = await AuthService.getProfile();
+    if (profile != null) {
+      appUser.value = profile;
+      // 加载用户书签
+      final bookmarkData = await BookmarkService.getGroups();
+      if (bookmarkData != null) {
+        final items = bookmarkData['navItems'] as List<Map<String, dynamic>>;
+        final icons = bookmarkData['groupIcons']
+            as Map<String, List<Map<String, dynamic>>>;
+        if (items.isNotEmpty) {
+          navItems.value = items;
+          groupIcons.value = icons;
+        }
+      }
+    } else {
+      // Token 过期，清除
+      await AuthService.clearToken();
+      authToken.value = '';
+    }
+  }
 
   // 恢复 GitHub 登录状态
   final savedToken = await GitHubAuthService.getToken();
@@ -47,6 +75,12 @@ void main() async {
   );
   if (weatherResult != null) {
     fullWeatherData.value = weatherResult;
+  }
+
+  // 恢复壁纸
+  final savedWallpaper = await SettingsService.get('wallpaper_url');
+  if (savedWallpaper != null && savedWallpaper.isNotEmpty) {
+    currentWallpaperUrl.value = savedWallpaper;
   }
 
   runApp(const StartMeApp());

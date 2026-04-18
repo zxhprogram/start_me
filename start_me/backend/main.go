@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"start_me_backend/database"
 	"start_me_backend/handlers"
+	"start_me_backend/middleware"
 )
 
 func main() {
@@ -61,6 +62,22 @@ func main() {
 		// 热搜榜
 		api.GET("/tophub/hot", handlers.GetHotTopics)
 		api.GET("/tophub/nodes", handlers.GetTopHubNodes)
+		// 设置
+		api.GET("/settings/:key", handlers.GetSetting)
+		api.PUT("/settings/:key", handlers.SetSetting)
+		// 用户认证（公开）
+		api.POST("/auth/register", handlers.Register)
+		api.POST("/auth/login", handlers.Login)
+		api.POST("/auth/github", handlers.GitHubLogin)
+	}
+
+	// 需要登录的路由
+	authApi := api.Group("/", middleware.AuthMiddleware())
+	{
+		authApi.GET("/auth/profile", handlers.GetProfile)
+		authApi.GET("/bookmarks/groups", handlers.GetBookmarkGroups)
+		authApi.PUT("/bookmarks/groups", handlers.SaveBookmarkGroups)
+		authApi.DELETE("/bookmarks/groups/:id", handlers.DeleteBookmarkGroup)
 	}
 
 	// GitHub OAuth 回调（路径与 GitHub App 配置一致）

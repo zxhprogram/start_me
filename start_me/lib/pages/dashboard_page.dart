@@ -19,7 +19,9 @@ import '../components/group_icons_grid.dart';
 import '../components/github_trending_card.dart';
 import '../components/github_feed_card.dart';
 import '../components/music_card.dart';
+import '../components/wallpaper_picker_dialog.dart';
 import '../services/wallpaper_service.dart';
+import '../services/settings_service.dart';
 import '../signals/app_signal.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -70,6 +72,16 @@ class _DashboardPageState extends State<DashboardPage> {
             ],
           ),
         ),
+        const PopupMenuItem<int>(
+          value: 1,
+          child: Row(
+            children: [
+              Icon(Icons.photo_library, size: 18, color: Colors.white70),
+              SizedBox(width: 12),
+              Text('选壁纸', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
       ],
       elevation: 8,
       color: const Color(0xFF2D2D3A),
@@ -77,6 +89,8 @@ class _DashboardPageState extends State<DashboardPage> {
     ).then((value) {
       if (value == 0 && !_isLoadingWallpaper) {
         _changeWallpaper();
+      } else if (value == 1) {
+        _showWallpaperPicker();
       }
     });
   }
@@ -90,6 +104,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
     if (newWallpaperUrl != null && mounted) {
       updateWallpaper(newWallpaperUrl);
+      SettingsService.set('wallpaper_url', newWallpaperUrl);
     }
 
     if (mounted) {
@@ -97,6 +112,15 @@ class _DashboardPageState extends State<DashboardPage> {
         _isLoadingWallpaper = false;
       });
     }
+  }
+
+  void _showWallpaperPicker() {
+    showDialog(
+      context: context,
+      builder: (context) => WallpaperPickerDialog(
+        onClose: () => Navigator.of(context).pop(),
+      ),
+    );
   }
 
   @override

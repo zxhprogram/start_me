@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:signals/signals.dart';
 import '../services/weather_service.dart';
+import '../services/bookmark_service.dart';
 
 // App-wide signals
 final selectedNavIndex = signal<int>(0);
 final searchText = signal<String>('');
+
+// User auth signals
+final appUser = signal<Map<String, dynamic>?>(null);
+final authToken = signal<String>('');
+final isLoggedIn = computed(() => authToken.value.isNotEmpty);
 
 // Navigation items - now a signal for dynamic updates
 final navItems = signal<List<Map<String, dynamic>>>([
@@ -210,6 +216,7 @@ void addIconToGroup(String groupLabel, Map<String, dynamic> icon) {
     current[groupLabel] = [...current[groupLabel]!, icon];
     groupIcons.value = current;
   }
+  _syncBookmarks();
 }
 
 // Helper function to reorder icons in a group
@@ -229,10 +236,13 @@ void reorderGroupIcons(String groupLabel, int oldIndex, int newIndex) {
       groupIcons.value = current;
     }
   }
+  _syncBookmarks();
 }
 
 // Helper function to remove a group from navItems
 void removeGroup(int index) {
+  // 主页不可删除
+  if (index == 0) return;
   if (index >= 0 && index < navItems.value.length) {
     final currentItems = [...navItems.value];
     final removedLabel = currentItems[index]['label'] as String;
@@ -252,6 +262,7 @@ void removeGroup(int index) {
     } else if (selectedNavIndex.value > index) {
       selectedNavIndex.value = selectedNavIndex.value - 1;
     }
+    _syncBookmarks();
   }
 }
 
@@ -275,6 +286,14 @@ void editGroup(int index, IconData icon, String label) {
         groupIcons.value = currentIcons;
       }
     }
+    _syncBookmarks();
+  }
+}
+
+// Sync bookmarks to backend if logged in
+void _syncBookmarks() {
+  if (isLoggedIn.value) {
+    BookmarkService.saveGroups();
   }
 }
 

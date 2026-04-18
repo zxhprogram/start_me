@@ -8,7 +8,7 @@ class WallpaperService {
   static const String _baseUrl = 'https://api.unsplash.com';
 
   // List of search keywords for random wallpaper
-  static final List<String> _keywords = [
+  static final List<String> keywords = [
     'nature',
     'landscape',
     'mountain',
@@ -30,7 +30,7 @@ class WallpaperService {
   static Future<String?> getRandomWallpaper() async {
     try {
       // Random keyword
-      final keyword = _keywords[Random().nextInt(_keywords.length)];
+      final keyword = keywords[Random().nextInt(keywords.length)];
 
       final url = Uri.parse(
         '$_baseUrl/photos/random?query=$keyword&orientation=landscape&client_id=$_accessKey',
@@ -50,6 +50,33 @@ class WallpaperService {
     } catch (e) {
       print('Error fetching wallpaper: $e');
       return null;
+    }
+  }
+
+  /// Get multiple wallpapers by keyword
+  static Future<List<Map<String, String>>> getWallpapersByKeyword(
+    String keyword, {
+    int count = 12,
+  }) async {
+    try {
+      final url = Uri.parse(
+        '$_baseUrl/photos/random?count=$count&query=$keyword&orientation=landscape&client_id=$_accessKey',
+      );
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((item) {
+          return {
+            'url': item['urls']['regular'] as String,
+            'thumb': item['urls']['small'] as String,
+          };
+        }).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 
