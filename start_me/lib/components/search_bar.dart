@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:signals/signals_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../signals/app_signal.dart';
+import '../services/search_suggestion_service.dart';
 
 class SearchBarWidget extends StatefulWidget {
   const SearchBarWidget({super.key});
@@ -12,31 +16,43 @@ class SearchBarWidget extends StatefulWidget {
 class _SearchBarWidgetState extends State<SearchBarWidget> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  OverlayEntry? _overlayEntry;
   final LayerLink _layerLink = LayerLink();
+
+  // Engine selector overlay
+  OverlayEntry? _overlayEntry;
+
+  // Suggestion overlay
+  OverlayEntry? _suggestionOverlay;
+  List<String> _suggestions = [];
+  int _selectedIndex = -1;
+  Timer? _debounceTimer;
+  bool _isSelectingSuggestion = false;
 
   @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();
+    _debounceTimer?.cancel();
     _hideOverlay();
+    _hideSuggestions();
     super.dispose();
   }
 
+  // ========== Engine Selector ==========
+
   void _showOverlay() {
     _hideOverlay();
+    _hideSuggestions();
 
     final overlay = Overlay.of(context);
     _overlayEntry = OverlayEntry(
       builder: (context) => Stack(
         children: [
-          // Transparent background to catch taps outside
           GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTap: _hideOverlay,
             child: Container(color: Colors.transparent),
           ),
-          // Dropdown positioned directly below the search bar
           CompositedTransformFollower(
             link: _layerLink,
             showWhenUnlinked: false,
@@ -44,7 +60,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
             child: Material(
               color: Colors.transparent,
               child: GestureDetector(
-                onTap: () {}, // Prevent tap from closing
+                onTap: () {},
                 child: _buildEngineDropdown(),
               ),
             ),
@@ -72,7 +88,170 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   void _selectEngine(int index) {
     selectedSearchEngine.value = index;
     _hideOverlay();
+    _suggestions = [];
+    _selectedIndex = -1;
+    _hideSuggestions();
   }
+
+  // ========== Suggestions ==========
+
+  void _onTextChanged(String text) {
+    _isSelectingSuggestion = false;
+    _selectedIndex = -1;
+    _debounceTimer?.cancel();
+
+    if (text.trim().isEmpty) {
+      _suggestions = [];
+      _hideSuggestions();
+      return;
+    }
+
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      final engine =
+          searchEngines[selectedSearchEngine.value]['name'] as String;
+      final results =
+          await SearchSuggestionService.getSuggestions(text, engine: engine);
+      if (mounted && _controller.text == text && !_isSelectingSuggestion) {
+        _suggestions = results;
+        _selectedIndex = -1;
+        if (_suggestions.isNotEmpty) {
+          _showSuggestions();
+        } else {
+          _hideSuggestions();
+        }
+      }
+    });
+  }
+
+  void _showSuggestions() {
+    _hideSuggestions();
+    _hideOverlay();
+
+    final overlay = Overlay.of(context);
+    _suggestionOverlay = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _hideSuggestions,
+            child: Container(color: Colors.transparent),
+          ),
+          CompositedTransformFollower(
+            link: _layerLink,
+            showWhenUnlinked: false,
+            offset: const Offset(0, 60),
+            child: Material(
+              color: Colors.transparent,
+              child: _buildSuggestionList(),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    overlay.insert(_suggestionOverlay!);
+  }
+
+  void _hideSuggestions() {
+    _suggestionOverlay?.remove();
+    _suggestionOverlay = null;
+  }
+
+  void _updateSuggestionOverlay() {
+    if (_suggestionOverlay != null) {
+      _suggestionOverlay!.markNeedsBuild();
+    }
+  }
+
+  void _selectSuggestion(String text) {
+    _isSelectingSuggestion = true;
+    _controller.text = text;
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: text.length),
+    );
+    _suggestions = [];
+    _selectedIndex = -1;
+    _hideSuggestions();
+    _focusNode.requestFocus();
+  }
+
+  void _doSearch() {
+    final query = _controller.text.trim();
+    if (query.isEmpty) return;
+
+    _hideSuggestions();
+    final engineUrl =
+        searchEngines[selectedSearchEngine.value]['url'] as String;
+    final searchUrl = '$engineUrl${Uri.encodeComponent(query)}';
+    launchUrl(Uri.parse(searchUrl), mode: LaunchMode.externalApplication);
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    if (_suggestions.isEmpty) {
+      if (event.logicalKey == LogicalKeyboardKey.enter) {
+        _doSearch();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      setState(() {
+        _selectedIndex =
+            (_selectedIndex + 1).clamp(0, _suggestions.length - 1);
+      });
+      _controller.text = _suggestions[_selectedIndex];
+      _controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: _controller.text.length),
+      );
+      _isSelectingSuggestion = true;
+      _updateSuggestionOverlay();
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      setState(() {
+        if (_selectedIndex <= 0) {
+          _selectedIndex = -1;
+        } else {
+          _selectedIndex--;
+        }
+      });
+      if (_selectedIndex >= 0) {
+        _controller.text = _suggestions[_selectedIndex];
+        _controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: _controller.text.length),
+        );
+        _isSelectingSuggestion = true;
+      }
+      _updateSuggestionOverlay();
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      if (_selectedIndex >= 0 && _selectedIndex < _suggestions.length) {
+        _selectSuggestion(_suggestions[_selectedIndex]);
+      } else {
+        _doSearch();
+      }
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _suggestions = [];
+      _selectedIndex = -1;
+      _hideSuggestions();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  // ========== Build ==========
 
   @override
   Widget build(BuildContext context) {
@@ -108,21 +287,28 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
-                  decoration: InputDecoration(
-                    hintText: '输入搜索内容',
-                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
+                child: Focus(
+                  onKeyEvent: _handleKeyEvent,
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    onChanged: _onTextChanged,
+                    style:
+                        const TextStyle(color: Colors.white, fontSize: 16),
+                    decoration: InputDecoration(
+                      hintText: '输入搜索内容',
+                      hintStyle:
+                          TextStyle(color: Colors.white.withOpacity(0.5)),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.search, color: Colors.white.withOpacity(0.7)),
-                onPressed: () {},
+                icon:
+                    Icon(Icons.search, color: Colors.white.withOpacity(0.7)),
+                onPressed: _doSearch,
               ),
               const SizedBox(width: 8),
             ],
@@ -131,6 +317,76 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
       );
     });
   }
+
+  Widget _buildSuggestionList() {
+    return Container(
+      width: 800,
+      constraints: const BoxConstraints(maxHeight: 400),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D2D3A).withOpacity(0.95),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ListView.builder(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          itemCount: _suggestions.length,
+          itemBuilder: (context, index) {
+            final isSelected = index == _selectedIndex;
+            return GestureDetector(
+              onTap: () => _selectSuggestion(_suggestions[index]),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                color: isSelected
+                    ? Colors.white.withOpacity(0.12)
+                    : Colors.transparent,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.search,
+                      color: Colors.white.withOpacity(0.35),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _suggestions[index],
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.75),
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(
+                        Icons.north_west,
+                        color: Colors.white.withOpacity(0.3),
+                        size: 14,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // ========== Engine Dropdown (unchanged logic) ==========
 
   Widget _buildEngineDropdown() {
     return Container(

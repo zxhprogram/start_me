@@ -56,6 +56,8 @@ func main() {
 		// 天气路由
 		api.GET("/weather", handlers.GetWeather)
 		api.GET("/weather/search", handlers.SearchCity)
+		// 搜索建议
+		api.GET("/search/suggestions", handlers.GetSearchSuggestions)
 	}
 
 	// GitHub OAuth 回调（路径与 GitHub App 配置一致）
