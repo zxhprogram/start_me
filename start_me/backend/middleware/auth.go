@@ -47,3 +47,13 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// GetUserID 从上下文中获取用户ID
+func GetUserID(c *gin.Context) (int64, bool) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return 0, false
+	}
+	id, ok := userID.(int64)
+	return id, ok
+}

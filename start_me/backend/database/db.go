@@ -148,6 +148,23 @@ func CreateTables() error {
 		return err
 	}
 
+	// 创建用户设置表
+	createUserSettingsSQL := `
+	CREATE TABLE IF NOT EXISTS user_settings (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		key TEXT NOT NULL,
+		value TEXT NOT NULL,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(user_id, key),
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	);
+	`
+	_, err = DB.Exec(createUserSettingsSQL)
+	if err != nil {
+		return err
+	}
+
 	log.Println("数据表创建成功")
 	return nil
 }

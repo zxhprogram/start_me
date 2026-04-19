@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/bookmark_service.dart';
+import '../services/card_order_service.dart';
 import '../services/github_auth_service.dart';
 import '../signals/app_signal.dart';
 
@@ -162,6 +163,9 @@ class _AuthDialogState extends State<AuthDialog> {
         selectedNavIndex.value = 0;
       }
     }
+
+    // 同步本地卡片顺序到服务器
+    await CardOrderService.syncToServer();
 
     if (mounted) {
       widget.onClose();
