@@ -133,6 +133,21 @@ func CreateTables() error {
 		return err
 	}
 
+	// 创建按键统计表
+	createKeystrokeSQL := `
+	CREATE TABLE IF NOT EXISTS keystroke_stats (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		key_name TEXT NOT NULL,
+		count INTEGER NOT NULL DEFAULT 0,
+		date TEXT NOT NULL,
+		UNIQUE(key_name, date)
+	);
+	`
+	_, err = DB.Exec(createKeystrokeSQL)
+	if err != nil {
+		return err
+	}
+
 	log.Println("数据表创建成功")
 	return nil
 }

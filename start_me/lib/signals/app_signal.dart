@@ -331,3 +331,7 @@ final songQueue = signal<List<Map<String, dynamic>>>([]);
 // Email signals
 final emailConfigured = signal<bool>(false);
 final emailList = signal<List<Map<String, dynamic>>>([]);
+
+// Keyboard monitor signals
+final keyboardMonitorEnabled = signal<bool>(false);
+final topKeystrokes = signal<List<Map<String, dynamic>>>([]);

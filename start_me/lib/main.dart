@@ -10,6 +10,8 @@ import 'services/settings_service.dart';
 import 'services/auth_service.dart';
 import 'services/bookmark_service.dart';
 import 'services/email_service.dart';
+import 'services/keyboard_hook_service.dart';
+import 'services/keystroke_service.dart';
 import 'signals/app_signal.dart';
 
 void main() async {
@@ -87,6 +89,18 @@ void main() async {
   final savedWallpaper = await SettingsService.get('wallpaper_url');
   if (savedWallpaper != null && savedWallpaper.isNotEmpty) {
     currentWallpaperUrl.value = savedWallpaper;
+  }
+
+  // 恢复键盘监控状态
+  final kbEnabled = await SettingsService.get('keyboard_monitor_enabled');
+  if (kbEnabled == 'true') {
+    final loaded = KeyboardHookService.loadDll();
+    if (loaded) {
+      KeyboardHookService.startHook();
+      keyboardMonitorEnabled.value = true;
+    }
+    final top = await KeystrokeService.getTopKeys();
+    topKeystrokes.value = top;
   }
 
   runApp(const StartMeApp());

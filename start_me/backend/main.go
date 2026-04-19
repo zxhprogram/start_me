@@ -65,6 +65,10 @@ func main() {
 		// 设置
 		api.GET("/settings/:key", handlers.GetSetting)
 		api.PUT("/settings/:key", handlers.SetSetting)
+		// 按键统计
+		api.GET("/keystrokes/top", handlers.GetTopKeystrokes)
+		api.GET("/keystrokes/all", handlers.GetAllKeystrokes)
+		api.PUT("/keystrokes/sync", handlers.SyncKeystrokes)
 		// 用户认证（公开）
 		api.POST("/auth/register", handlers.Register)
 		api.POST("/auth/login", handlers.Login)

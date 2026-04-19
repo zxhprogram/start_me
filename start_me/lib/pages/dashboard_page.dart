@@ -20,6 +20,7 @@ import '../components/github_trending_card.dart';
 import '../components/github_feed_card.dart';
 import '../components/music_card.dart';
 import '../components/email_card.dart';
+import '../components/keyboard_stats_card.dart';
 import '../components/wallpaper_picker_dialog.dart';
 import '../services/wallpaper_service.dart';
 import '../services/settings_service.dart';
@@ -268,6 +269,7 @@ class _DashboardPageState extends State<DashboardPage> {
             const GitHubTrendingCard(),
             const GitHubFeedCard(),
             const EmailCard(),
+            const KeyboardStatsCard(),
           ],
         );
       },

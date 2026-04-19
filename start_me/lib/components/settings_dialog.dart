@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../signals/app_signal.dart';
 import '../services/github_auth_service.dart';
 import '../services/email_service.dart';
+import '../services/settings_service.dart';
+import '../services/keyboard_hook_service.dart';
 
 class SettingsDialog extends StatefulWidget {
   final VoidCallback onClose;
@@ -110,6 +112,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 _buildHeader(),
                 _buildGitHubSection(),
                 _buildEmailSection(),
+                _buildKeyboardSection(),
                 const SizedBox(height: 20),
               ],
             ),
@@ -488,6 +491,52 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildKeyboardSection() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D2D3A),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Watch((context) {
+        final enabled = keyboardMonitorEnabled.value;
+        return Row(
+          children: [
+            Icon(Icons.keyboard_outlined, color: Colors.white.withOpacity(0.8), size: 20),
+            const SizedBox(width: 8),
+            Text(
+              '全局按键监控',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            Switch(
+              value: enabled,
+              activeColor: Colors.blue,
+              onChanged: (val) async {
+                if (val) {
+                  final loaded = KeyboardHookService.loadDll();
+                  if (loaded) {
+                    KeyboardHookService.startHook();
+                    keyboardMonitorEnabled.value = true;
+                  }
+                } else {
+                  KeyboardHookService.stopHook();
+                  keyboardMonitorEnabled.value = false;
+                }
+                await SettingsService.set('keyboard_monitor_enabled', val.toString());
+              },
+            ),
+          ],
+        );
+      }),
     );
   }
 
