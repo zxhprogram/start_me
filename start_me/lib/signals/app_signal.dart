@@ -327,3 +327,7 @@ final isGithubLoggedIn = computed(() => githubToken.value.isNotEmpty);
 final currentSong = signal<Map<String, dynamic>?>(null);
 final musicPlaying = signal<bool>(false);
 final songQueue = signal<List<Map<String, dynamic>>>([]);
+
+// Email signals
+final emailConfigured = signal<bool>(false);
+final emailList = signal<List<Map<String, dynamic>>>([]);

@@ -9,6 +9,7 @@ import 'services/weather_service.dart';
 import 'services/settings_service.dart';
 import 'services/auth_service.dart';
 import 'services/bookmark_service.dart';
+import 'services/email_service.dart';
 import 'signals/app_signal.dart';
 
 void main() async {
@@ -36,6 +37,11 @@ void main() async {
           navItems.value = items;
           groupIcons.value = icons;
         }
+      }
+      // 检查邮箱配置
+      final emailConfig = await EmailService.getConfig();
+      if (emailConfig != null) {
+        emailConfigured.value = true;
       }
     } else {
       // Token 过期，清除

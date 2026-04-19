@@ -78,6 +78,11 @@ func main() {
 		authApi.GET("/bookmarks/groups", handlers.GetBookmarkGroups)
 		authApi.PUT("/bookmarks/groups", handlers.SaveBookmarkGroups)
 		authApi.DELETE("/bookmarks/groups/:id", handlers.DeleteBookmarkGroup)
+		// 邮箱配置
+		authApi.GET("/email/config", handlers.GetEmailConfig)
+		authApi.PUT("/email/config", handlers.SaveEmailConfig)
+		authApi.DELETE("/email/config", handlers.DeleteEmailConfig)
+		authApi.GET("/email/list", handlers.GetEmails)
 	}
 
 	// GitHub OAuth 回调（路径与 GitHub App 配置一致）

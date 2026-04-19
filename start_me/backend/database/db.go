@@ -113,6 +113,26 @@ func CreateTables() error {
 		return err
 	}
 
+	// 创建邮箱配置表
+	createEmailConfigSQL := `
+	CREATE TABLE IF NOT EXISTS email_configs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL UNIQUE,
+		host TEXT NOT NULL,
+		port INTEGER NOT NULL DEFAULT 995,
+		username TEXT NOT NULL,
+		password TEXT NOT NULL,
+		use_tls INTEGER NOT NULL DEFAULT 1,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	);
+	`
+	_, err = DB.Exec(createEmailConfigSQL)
+	if err != nil {
+		return err
+	}
+
 	log.Println("数据表创建成功")
 	return nil
 }
