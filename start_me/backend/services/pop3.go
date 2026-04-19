@@ -23,6 +23,15 @@ type Email struct {
 	Preview string `json:"preview"`
 }
 
+type EmailDetail struct {
+	ID      int    `json:"id"`
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Date    string `json:"date"`
+	Body    string `json:"body"`
+}
+
 type pop3Conn struct {
 	conn   net.Conn
 	reader *bufio.Reader
@@ -100,13 +109,7 @@ func (p *pop3Conn) close() {
 	p.conn.Close()
 }
 
-func TestPOP3Connection(host string, port int, username, password string, useTLS bool) error {
-	p, err := newPOP3Conn(host, port, useTLS)
-	if err != nil {
-		return err
-	}
-	defer p.close()
-
+func (p *pop3Conn) login(username, password string) error {
 	if _, err := p.sendCmd("USER " + username); err != nil {
 		return fmt.Errorf("用户名验证失败: %w", err)
 	}
@@ -116,43 +119,61 @@ func TestPOP3Connection(host string, port int, username, password string, useTLS
 	return nil
 }
 
-func FetchEmails(host string, port int, username, password string, useTLS bool, count int) ([]Email, error) {
-	p, err := newPOP3Conn(host, port, useTLS)
-	if err != nil {
-		return nil, err
-	}
-	defer p.close()
-
-	if _, err := p.sendCmd("USER " + username); err != nil {
-		return nil, fmt.Errorf("用户名验证失败: %w", err)
-	}
-	if _, err := p.sendCmd("PASS " + password); err != nil {
-		return nil, fmt.Errorf("密码验证失败: %w", err)
-	}
-
+func (p *pop3Conn) getTotal() (int, error) {
 	statLine, err := p.sendCmd("STAT")
 	if err != nil {
-		return nil, fmt.Errorf("获取邮件数量失败: %w", err)
+		return 0, fmt.Errorf("获取邮件数量失败: %w", err)
 	}
 	parts := strings.Fields(statLine)
 	if len(parts) < 2 {
-		return nil, fmt.Errorf("STAT 响应格式错误")
+		return 0, fmt.Errorf("STAT 响应格式错误")
 	}
 	total, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return nil, fmt.Errorf("解析邮件数量失败: %w", err)
+		return 0, fmt.Errorf("解析邮件数量失败: %w", err)
 	}
-	if total == 0 {
-		return []Email{}, nil
+	return total, nil
+}
+
+func TestPOP3Connection(host string, port int, username, password string, useTLS bool) error {
+	p, err := newPOP3Conn(host, port, useTLS)
+	if err != nil {
+		return err
+	}
+	defer p.close()
+	return p.login(username, password)
+}
+
+func FetchEmails(host string, port int, username, password string, useTLS bool, page, pageSize int) ([]Email, int, error) {
+	p, err := newPOP3Conn(host, port, useTLS)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer p.close()
+
+	if err := p.login(username, password); err != nil {
+		return nil, 0, err
 	}
 
-	start := total - count + 1
+	total, err := p.getTotal()
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []Email{}, 0, nil
+	}
+
+	end := total - (page-1)*pageSize
+	start := end - pageSize + 1
 	if start < 1 {
 		start = 1
 	}
+	if end < 1 {
+		return []Email{}, total, nil
+	}
 
 	var emails []Email
-	for i := total; i >= start; i-- {
+	for i := end; i >= start; i-- {
 		if _, err := p.sendCmd(fmt.Sprintf("RETR %d", i)); err != nil {
 			continue
 		}
@@ -168,7 +189,116 @@ func FetchEmails(host string, port int, username, password string, useTLS bool, 
 		return emails[a].ID > emails[b].ID
 	})
 
-	return emails, nil
+	return emails, total, nil
+}
+
+func FetchEmailDetail(host string, port int, username, password string, useTLS bool, emailID int) (*EmailDetail, error) {
+	p, err := newPOP3Conn(host, port, useTLS)
+	if err != nil {
+		return nil, err
+	}
+	defer p.close()
+
+	if err := p.login(username, password); err != nil {
+		return nil, err
+	}
+
+	if _, err := p.sendCmd(fmt.Sprintf("RETR %d", emailID)); err != nil {
+		return nil, fmt.Errorf("获取邮件失败: %w", err)
+	}
+	raw, err := p.readMultiLine()
+	if err != nil {
+		return nil, fmt.Errorf("读取邮件失败: %w", err)
+	}
+
+	return parseEmailDetail(emailID, raw), nil
+}
+
+func parseEmailDetail(id int, raw string) *EmailDetail {
+	msg, err := mail.ReadMessage(strings.NewReader(raw))
+	if err != nil {
+		return &EmailDetail{ID: id, Subject: "(解析失败)"}
+	}
+
+	subject := decodeHeader(msg.Header.Get("Subject"))
+	from := decodeHeader(msg.Header.Get("From"))
+	to := decodeHeader(msg.Header.Get("To"))
+	dateStr := msg.Header.Get("Date")
+	date := formatDate(dateStr)
+	body := extractFullBody(msg)
+
+	return &EmailDetail{
+		ID:      id,
+		From:    from,
+		To:      to,
+		Subject: subject,
+		Date:    date,
+		Body:    body,
+	}
+}
+
+func extractFullBody(msg *mail.Message) string {
+	contentType := msg.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "text/plain"
+	}
+
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return readAll(msg.Body)
+	}
+
+	if strings.HasPrefix(mediaType, "multipart/") {
+		return extractMultipartBody(msg.Body, params["boundary"])
+	}
+
+	return readAll(msg.Body)
+}
+
+func extractMultipartBody(body io.Reader, boundary string) string {
+	if boundary == "" {
+		return ""
+	}
+	mr := multipart.NewReader(body, boundary)
+	var htmlBody, textBody string
+	for {
+		part, err := mr.NextPart()
+		if err != nil {
+			break
+		}
+		ct := part.Header.Get("Content-Type")
+		mediaType, params, _ := mime.ParseMediaType(ct)
+
+		if strings.HasPrefix(mediaType, "multipart/") {
+			nested := extractMultipartBody(part, params["boundary"])
+			if nested != "" {
+				if htmlBody == "" {
+					htmlBody = nested
+				}
+			}
+			continue
+		}
+
+		if strings.Contains(ct, "text/html") {
+			htmlBody = readAll(part)
+		} else if strings.Contains(ct, "text/plain") || ct == "" {
+			if textBody == "" {
+				textBody = readAll(part)
+			}
+		}
+	}
+	if htmlBody != "" {
+		return htmlBody
+	}
+	return textBody
+}
+
+func readAll(r io.Reader) string {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 func parseEmail(id int, raw string) Email {

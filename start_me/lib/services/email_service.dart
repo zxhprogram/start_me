@@ -54,17 +54,37 @@ class EmailService {
     return false;
   }
 
-  static Future<List<Map<String, dynamic>>> getEmails() async {
+  static Future<Map<String, dynamic>> getEmails({int page = 1, int pageSize = 20}) async {
     try {
       final resp = await http.get(
-        Uri.parse('$_baseUrl/email/list'),
+        Uri.parse('$_baseUrl/email/list?page=$page&page_size=$pageSize'),
         headers: AuthService.getAuthHeaders(),
       );
       final data = jsonDecode(resp.body);
       if (data['success'] == true && data['data'] != null) {
-        return List<Map<String, dynamic>>.from(data['data']);
+        final d = data['data'];
+        return {
+          'emails': List<Map<String, dynamic>>.from(d['emails'] ?? []),
+          'total': d['total'] ?? 0,
+          'page': d['page'] ?? page,
+          'page_size': d['page_size'] ?? pageSize,
+        };
       }
     } catch (_) {}
-    return [];
+    return {'emails': <Map<String, dynamic>>[], 'total': 0, 'page': page, 'page_size': pageSize};
+  }
+
+  static Future<Map<String, dynamic>?> getEmailDetail(int emailId) async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$_baseUrl/email/detail/$emailId'),
+        headers: AuthService.getAuthHeaders(),
+      );
+      final data = jsonDecode(resp.body);
+      if (data['success'] == true && data['data'] != null) {
+        return data['data'] as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
   }
 }

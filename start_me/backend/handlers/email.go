@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -76,7 +77,6 @@ func SaveEmailConfig(c *gin.Context) {
 		return
 	}
 
-	// 先测试连接
 	err := services.TestPOP3Connection(req.Host, req.Port, req.Username, req.Password, req.UseTLS)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "连接测试失败: " + err.Error()})
@@ -143,26 +143,57 @@ func DeleteEmailConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-func GetEmails(c *gin.Context) {
-	userID := c.GetInt64("user_id")
+type emailConfig struct {
+	host     string
+	port     int
+	username string
+	password string
+	useTLS   bool
+}
 
+func getUserEmailConfig(userID int64) (*emailConfig, error) {
 	var host, username, encPassword string
 	var port, useTLS int
 	err := database.DB.QueryRow(`
 		SELECT host, port, username, password, use_tls FROM email_configs WHERE user_id = ?
 	`, userID).Scan(&host, &port, &username, &encPassword, &useTLS)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "未配置邮箱"})
-		return
+		return nil, fmt.Errorf("未配置邮箱")
 	}
 
 	password, err := decryptPassword(encPassword)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "密码解密失败"})
+		return nil, fmt.Errorf("密码解密失败")
+	}
+
+	return &emailConfig{
+		host:     host,
+		port:     port,
+		username: username,
+		password: password,
+		useTLS:   useTLS == 1,
+	}, nil
+}
+
+func GetEmails(c *gin.Context) {
+	userID := c.GetInt64("user_id")
+
+	cfg, err := getUserEmailConfig(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
 	}
 
-	emails, err := services.FetchEmails(host, port, username, password, useTLS == 1, 10)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 50 {
+		pageSize = 20
+	}
+
+	emails, total, err := services.FetchEmails(cfg.host, cfg.port, cfg.username, cfg.password, cfg.useTLS, page, pageSize)
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "连接失败") {
@@ -172,5 +203,37 @@ func GetEmails(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "data": emails})
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"emails":    emails,
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
+	})
+}
+
+func GetEmailDetail(c *gin.Context) {
+	userID := c.GetInt64("user_id")
+
+	cfg, err := getUserEmailConfig(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	emailID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "无效的邮件 ID"})
+		return
+	}
+
+	detail, err := services.FetchEmailDetail(cfg.host, cfg.port, cfg.username, cfg.password, cfg.useTLS, emailID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": detail})
 }

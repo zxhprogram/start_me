@@ -83,6 +83,7 @@ func main() {
 		authApi.PUT("/email/config", handlers.SaveEmailConfig)
 		authApi.DELETE("/email/config", handlers.DeleteEmailConfig)
 		authApi.GET("/email/list", handlers.GetEmails)
+		authApi.GET("/email/detail/:id", handlers.GetEmailDetail)
 	}
 
 	// GitHub OAuth 回调（路径与 GitHub App 配置一致）

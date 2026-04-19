@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 import '../signals/app_signal.dart';
 import '../services/email_service.dart';
+import 'email_dialog.dart';
 
 class EmailCard extends StatefulWidget {
   const EmailCard({super.key});
@@ -40,9 +41,9 @@ class _EmailCardState extends State<EmailCard> {
       _error = '';
     });
     try {
-      final emails = await EmailService.getEmails();
+      final result = await EmailService.getEmails(page: 1, pageSize: 10);
       if (mounted) {
-        emailList.value = emails;
+        emailList.value = result['emails'] as List<Map<String, dynamic>>;
         setState(() => _isLoading = false);
       }
     } catch (e) {
@@ -55,49 +56,61 @@ class _EmailCardState extends State<EmailCard> {
     }
   }
 
+  void _openEmailDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.6),
+      builder: (context) => const EmailDialog(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2E).withOpacity(0.9),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Watch((context) {
-        final configured = emailConfigured.value;
-        final loggedIn = isLoggedIn.value;
-        final emails = emailList.value;
+    return GestureDetector(
+      onTap: emailConfigured.value ? _openEmailDialog : null,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E2E).withOpacity(0.9),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Watch((context) {
+          final configured = emailConfigured.value;
+          final loggedIn = isLoggedIn.value;
+          final emails = emailList.value;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(emails.length),
-            const SizedBox(height: 12),
-            Expanded(
-              child: !loggedIn
-                  ? _buildPlaceholder('请先登录')
-                  : !configured
-                      ? _buildPlaceholder('请在设置中配置邮箱')
-                      : _isLoading && emails.isEmpty
-                          ? const Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white54,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(emails.length),
+              const SizedBox(height: 12),
+              Expanded(
+                child: !loggedIn
+                    ? _buildPlaceholder('请先登录')
+                    : !configured
+                        ? _buildPlaceholder('请在设置中配置邮箱')
+                        : _isLoading && emails.isEmpty
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white54,
+                                  ),
                                 ),
-                              ),
-                            )
-                          : _error.isNotEmpty && emails.isEmpty
-                              ? _buildPlaceholder(_error)
-                              : emails.isEmpty
-                                  ? _buildPlaceholder('暂无邮件')
-                                  : _buildEmailList(emails),
-            ),
-          ],
-        );
-      }),
+                              )
+                            : _error.isNotEmpty && emails.isEmpty
+                                ? _buildPlaceholder(_error)
+                                : emails.isEmpty
+                                    ? _buildPlaceholder('暂无邮件')
+                                    : _buildEmailList(emails),
+              ),
+            ],
+          );
+        }),
+      ),
     );
   }
 
