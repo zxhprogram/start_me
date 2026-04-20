@@ -96,6 +96,7 @@ func CreateTables() error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		group_id INTEGER NOT NULL,
 		user_id INTEGER NOT NULL,
+		folder_id INTEGER DEFAULT NULL,
 		name TEXT NOT NULL,
 		url TEXT NOT NULL DEFAULT '',
 		icon_type TEXT NOT NULL DEFAULT 'network',
@@ -105,10 +106,30 @@ func CreateTables() error {
 		description TEXT DEFAULT '',
 		sort_order INTEGER NOT NULL DEFAULT 0,
 		FOREIGN KEY (group_id) REFERENCES bookmark_groups(id) ON DELETE CASCADE,
-		FOREIGN KEY (user_id) REFERENCES users(id)
+		FOREIGN KEY (user_id) REFERENCES users(id),
+		FOREIGN KEY (folder_id) REFERENCES bookmark_folders(id) ON DELETE CASCADE
 	);
 	`
 	_, err = DB.Exec(createBookmarksSQL)
+	if err != nil {
+		return err
+	}
+
+	// 创建书签文件夹表
+	createFoldersSQL := `
+	CREATE TABLE IF NOT EXISTS bookmark_folders (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		group_id INTEGER NOT NULL,
+		user_id INTEGER NOT NULL,
+		name TEXT NOT NULL,
+		sort_order INTEGER NOT NULL DEFAULT 0,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (group_id) REFERENCES bookmark_groups(id) ON DELETE CASCADE,
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	);
+	`
+	_, err = DB.Exec(createFoldersSQL)
 	if err != nil {
 		return err
 	}

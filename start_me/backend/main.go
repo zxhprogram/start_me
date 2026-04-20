@@ -82,6 +82,13 @@ func main() {
 		authApi.GET("/bookmarks/groups", handlers.GetBookmarkGroups)
 		authApi.PUT("/bookmarks/groups", handlers.SaveBookmarkGroups)
 		authApi.DELETE("/bookmarks/groups/:id", handlers.DeleteBookmarkGroup)
+		// 书签文件夹
+		authApi.GET("/bookmarks/folders", handlers.GetFolders)
+		authApi.POST("/bookmarks/folders", handlers.CreateFolder)
+		authApi.PUT("/bookmarks/folders/:id", handlers.RenameFolder)
+		authApi.DELETE("/bookmarks/folders/:id", handlers.DeleteFolder)
+		authApi.PUT("/bookmarks/folders/:id/bookmarks", handlers.MoveBookmarksToFolder)
+		authApi.DELETE("/bookmarks/folders/:id/bookmarks", handlers.MoveBookmarksOutOfFolder)
 		// 邮箱配置
 		authApi.GET("/email/config", handlers.GetEmailConfig)
 		authApi.PUT("/email/config", handlers.SaveEmailConfig)

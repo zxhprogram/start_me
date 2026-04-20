@@ -155,8 +155,26 @@ final searchEngines = [
   },
 ];
 
+// Bookmark folder data structure
+// { folderId: { name: string, bookmarks: [] } }
+// folderId = null 表示直接放在分组下的书签
+final groupFolders = signal<Map<String, Map<String, dynamic>>>({
+  '主页': {},
+  '程序员': {},
+  '设计': {},
+  '产品': {},
+  'work': {},
+  'study': {},
+  '文档': {},
+  '工具': {},
+  '导航': {},
+  '数学': {},
+  '摸鱼': {},
+});
+
 // Group icons data - each group has a list of icons
 // Key is group label, value is list of icons with name and icon data
+// This now only contains bookmarks without folder_id
 final groupIcons = signal<Map<String, List<Map<String, dynamic>>>>({
   '主页': [], // Home uses dashboard cards, not icons
   '程序员': [],

@@ -70,6 +70,7 @@ class BookmarkService {
         final groups = data['data'] as List;
         final navList = <Map<String, dynamic>>[];
         final iconsMap = <String, List<Map<String, dynamic>>>{};
+        final foldersMap = <String, Map<String, dynamic>>{};
 
         for (final g in groups) {
           final label = g['label'] as String;
@@ -79,10 +80,45 @@ class BookmarkService {
             'label': label,
           });
 
+          // 处理书签
           final bookmarks = g['bookmarks'] as List? ?? [];
+          final folders = g['folders'] as List? ?? [];
+
+          // 构建文件夹数据
+          final folderData = <String, dynamic>{};
+          for (final f in folders) {
+            final folderId = f['id']?.toString() ?? '';
+            final folderBookmarks = (f['bookmarks'] as List? ?? []).map<Map<String, dynamic>>((b) {
+              final iconType = b['icon_type'] as String? ?? 'network';
+              return {
+                'id': b['id'] as int?,
+                'name': b['name'] as String? ?? '',
+                'url': b['url'] as String? ?? '',
+                'description': b['description'] as String? ?? '',
+                'type': iconType,
+                if (iconType == 'network')
+                  'iconUrl': b['icon_url'] as String? ?? '',
+                if (iconType == 'custom')
+                  'iconText': b['icon_text'] as String? ?? '',
+                'color': Color(b['color'] as int? ?? 0xFF2196F3),
+                'folder_id': int.parse(folderId),
+              };
+            }).toList();
+
+            folderData[folderId] = {
+              'id': int.parse(folderId),
+              'name': f['name'] as String? ?? '未命名',
+              'sort_order': f['sort_order'] as int? ?? 0,
+              'bookmarks': folderBookmarks,
+            };
+          }
+          foldersMap[label] = folderData;
+
+          // 处理独立书签（不在文件夹中）
           iconsMap[label] = bookmarks.map<Map<String, dynamic>>((b) {
             final iconType = b['icon_type'] as String? ?? 'network';
             return {
+              'id': b['id'] as int?,
               'name': b['name'] as String? ?? '',
               'url': b['url'] as String? ?? '',
               'description': b['description'] as String? ?? '',
@@ -96,11 +132,31 @@ class BookmarkService {
           }).toList();
         }
 
-        return {'navItems': navList, 'groupIcons': iconsMap};
+        return {
+          'navItems': navList,
+          'groupIcons': iconsMap,
+          'groupFolders': foldersMap,
+        };
       }
       return null;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// 加载分组数据到 signals
+  static Future<void> loadGroups() async {
+    final data = await getGroups();
+    if (data != null) {
+      final items = data['navItems'] as List<Map<String, dynamic>>;
+      final icons = data['groupIcons'] as Map<String, List<Map<String, dynamic>>>;
+      final folders = data['groupFolders'] as Map<String, Map<String, dynamic>>;
+
+      if (items.isNotEmpty) {
+        navItems.value = items;
+        groupIcons.value = icons;
+        groupFolders.value = folders;
+      }
     }
   }
 
